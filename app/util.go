@@ -45,39 +45,39 @@ func getDefaultDirectory(name string) string {
 	return templatesDir
 }
 
+func runCommand(command string, args []string, projectPath string, description string) error {
+	cmd := exec.Command(command, args...)
+	cmd.Dir = projectPath
+	fmt.Printf("Running %s:\n", description)
+
+	// Execute the command
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf(color.RedString("Error: running %s: %v\n%s", description, err, output))
+	}
+
+	fmt.Printf(color.GreenString("%s finished successfully.\n\n"), description)
+	return nil
+}
+
+// Function to initialize a Git repository in the specified project path
 func initializeGitRepository(projectPath string) error {
-	cmd := exec.Command("git", "init")
-	cmd.Dir = projectPath
-	return cmd.Run()
+	return runCommand("git", []string{"init"}, projectPath, "git init")
 }
 
+// Function to run 'go get ./...' in the specified project path
 func runGoGet(projectPath string) error {
-	cmd := exec.Command("go", "get", "./...")
-	cmd.Dir = projectPath
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf(color.RedString("Error: go get failed: %v\n%s", err, output))
-	}
-	return nil
+	return runCommand("go", []string{"get"}, projectPath, "go get")
 }
 
+// Function to run 'go mod tidy' in the specified project path
 func runGoModTidy(projectPath string) error {
-	cmd := exec.Command("go", "mod", "tidy")
-	cmd.Dir = projectPath
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf(color.RedString("Error: go mod tidy failed: %v\n%s", err, output))
-	}
-	return nil
+	return runCommand("go", []string{"mod", "tidy"}, projectPath, "go mod tidy")
 }
 
+// Function to clone a Git repository from the specified URL to the destination directory
 func gitClone(repoURL, destination string) error {
-	cmd := exec.Command("git", "clone", repoURL, destination)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf(color.RedString("Error: git clone error: %v, output: %s", err, string(output)))
-	}
-	return nil
+	return runCommand("git", []string{"clone", repoURL, destination}, ".", "git clone")
 }
 
 func promptProjectName() string {
