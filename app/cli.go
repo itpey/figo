@@ -33,7 +33,7 @@ func Create() *cli.App {
 		Version:     appVersion,
 		Action: func(c *cli.Context) error {
 			clearConsole()
-			fmt.Print(color.HiMagentaString(appNameArt))
+			fmt.Print(color.CyanString(appNameArt))
 
 			var projectName string
 
