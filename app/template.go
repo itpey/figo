@@ -15,7 +15,6 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -25,39 +24,23 @@ import (
 	"github.com/fatih/color"
 )
 
-type TemplateMetadata struct {
-	Description string `json:"description"`
-	Author      string `json:"author"`
-}
-
-func loadTemplateMetadata(templateDir string) (*TemplateMetadata, error) {
-	metadataFile := filepath.Join(templateDir, metadataFileName)
-
-	// Check if metadata file exists
-	if _, err := os.Stat(metadataFile); os.IsNotExist(err) {
-		return nil, nil
-	} else if err != nil {
-		return nil, fmt.Errorf(color.RedString("Error: checking metadata file: %v", err))
-	}
-
-	// Read metadata file
-	data, err := os.ReadFile(metadataFile)
-	if err != nil {
-		return nil, fmt.Errorf(color.RedString("Error: reading metadata file: %v", err))
-	}
-
-	// Unmarshal metadata JSON
-	var metadata TemplateMetadata
-	if err := json.Unmarshal(data, &metadata); err != nil {
-		return nil, fmt.Errorf(color.RedString("Error: decoding metadata file: %v", err))
-	}
-
-	return &metadata, nil
-}
 func extractAllTemplates(sourceDir string) error {
+	repoName, err := getRepositoryName(sourceDir)
+	if err != nil {
+		fmt.Printf(color.RedString("Error: getting repository name for template '%s': %v\n"), sourceDir, err)
+	}
+
+	if isGoModule(sourceDir) {
+		destPath := filepath.Join(templatesDirectory, repoName)
+		if err := copyTemplate(sourceDir, destPath); err != nil {
+			fmt.Printf(color.RedString("Error:Error copying template '%s': %v\n"), repoName, err)
+		}
+		fmt.Printf("Template '%s' extracted successfully\n", repoName)
+	}
+
 	files, err := os.ReadDir(sourceDir)
 	if err != nil {
-		return fmt.Errorf(color.RedString("Error: reading repository directory: %v", err))
+		return fmt.Errorf(color.RedString("Error: reading repository directory: %v"), err)
 	}
 
 	for _, file := range files {
@@ -69,119 +52,111 @@ func extractAllTemplates(sourceDir string) error {
 				continue
 			}
 
-			// Read template metadata
-			metaData, err := loadTemplateMetadata(templateDir)
-			if err != nil {
-				continue
-			}
+			// Check if the directory contains a Go module
+			if isGoModule(templateDir) {
+				// Get the base directory name (to use as template name)
+				templateName := fmt.Sprintf("%s/%s", repoName, file.Name())
 
-			// Skip if metadata is not available
-			if metaData == nil {
-				continue
-			}
-
-			// Check if the template already exists locally
-			destPath := filepath.Join(templatesDirectory, file.Name())
-			if _, err := os.Stat(destPath); err == nil {
-				fmt.Print(color.YellowString("template '%s' already exists, updating to the latest version\n", file.Name()))
-				if err := os.RemoveAll(destPath); err != nil {
-					fmt.Print(color.RedString("Error: removing existing template '%s': %v\n", file.Name(), err))
+				// Copy template directory to local templates directory
+				destPath := filepath.Join(templatesDirectory, templateName)
+				if err := copyTemplate(templateDir, destPath); err != nil {
+					fmt.Printf(color.RedString("Error: copying template '%s': %v\n"), templateName, err)
 					continue
 				}
-			}
 
-			// Copy template directory to local templates directory
-			if err := copyTemplate(templateDir, destPath, false); err != nil {
-				fmt.Print(color.RedString("Error: copying template '%s': %v\n", file.Name(), err))
-				continue
+				fmt.Printf("Template '%s' extracted successfully\n", templateName)
 			}
-
-			fmt.Print(color.GreenString("Template '%s' extracted successfully\n", file.Name()))
 		}
 	}
 
 	return nil
 }
-
-func copyTemplate(src, dest string, excludeMetadata bool) error {
+func copyTemplate(src, dest string) error {
 	// Create destination directory if it doesn't exist
 	if err := os.MkdirAll(dest, 0755); err != nil {
-		return err
+		return fmt.Errorf(color.RedString("Error: failed to create destination directory: %v"), err)
 	}
 
 	// Traverse source directory
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf(color.RedString("Error: accessing path %q: %v"), path, err)
 		}
 
+		// Get relative path within the source directory
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return fmt.Errorf(color.RedString("Error: getting relative path for %q: %v"), path, err)
+		}
+
+		// Construct destination path
+		destPath := filepath.Join(dest, relPath)
+		// Check if the directory should be skipped
 		if info.IsDir() {
+			if shouldSkipDir(info.Name()) {
+				return filepath.SkipDir
+			}
 			// Create directory in destination
-			destPath := filepath.Join(dest, path[len(src):]) // Get relative path
 			if err := os.MkdirAll(destPath, info.Mode()); err != nil {
-				return err
+				return fmt.Errorf(color.RedString("Error: failed to create directory %q: %v"), destPath, err)
 			}
 		} else {
-			// Skip copying certain files
 			if shouldSkipFile(info.Name()) {
 				return nil
 			}
-
-			if excludeMetadata && info.Name() == metadataFileName {
-				return nil
-			}
-
 			// Copy file to destination
-			destPath := filepath.Join(dest, path[len(src):]) // Get relative path
 			srcFile, err := os.Open(path)
 			if err != nil {
-				return err
+				return fmt.Errorf(color.RedString("Error: failed to open source file %q: %v"), path, err)
 			}
 			defer srcFile.Close()
 
 			destFile, err := os.Create(destPath)
 			if err != nil {
-				return err
+				return fmt.Errorf(color.RedString("Error: failed to create destination file %q: %v"), destPath, err)
 			}
 			defer destFile.Close()
 
 			if _, err := io.Copy(destFile, srcFile); err != nil {
-				return err
+				return fmt.Errorf(color.RedString("Error: failed to copy file %q to %q: %v"), path, destPath, err)
 			}
 
 			// Preserve file mode
 			if err := os.Chmod(destPath, info.Mode()); err != nil {
-				return err
+				return fmt.Errorf(color.RedString("Error: failed to set file mode for %q: %v"), destPath, err)
 			}
 		}
 
 		return nil
 	})
+
+	if err != nil {
+		return fmt.Errorf(color.RedString("Error: copying template: %v"), err)
+	}
+
+	return nil
 }
 
 func printTemplateOptions(templates []string, currentIndex int) {
 	for i, tmpl := range templates {
-		templatePath := filepath.Join(templatesDirectory, tmpl)
-		if metadata, err := loadTemplateMetadata(templatePath); err == nil {
-			if i == currentIndex {
-				fmt.Print(color.GreenString("-> %s: %s | %s\n", tmpl, metadata.Description, metadata.Author))
-			} else {
-				fmt.Printf("%s: %s | %s\n", tmpl, metadata.Description, metadata.Author)
-			}
-
+		if i == currentIndex {
+			fmt.Print(color.GreenString("-> %s\n", tmpl))
+		} else {
+			fmt.Printf("%s\n", tmpl)
 		}
 
 	}
+
 }
 
 func downloadTemplates(url string) error {
 
 	if url == "" {
-		fmt.Print(color.RedString("No URL specified, using default repository: %s\n", defaultTemplatesRepoURL))
+		fmt.Print(color.YellowString("Warning: No URL specified, using default repository: %s\n", defaultTemplatesRepoURL))
 		url = defaultTemplatesRepoURL
 	}
 
-	fmt.Print(color.YellowString("downloading templates from repository: %s\n", url))
+	fmt.Print(color.YellowString("Downloading templates from repository: %s ...\n", url))
 
 	repoDir := repoDirectory
 	if err := gitClone(url, repoDir); err != nil {
@@ -192,8 +167,6 @@ func downloadTemplates(url string) error {
 	if err := extractAllTemplates(repoDir); err != nil {
 		return fmt.Errorf(color.RedString("Error: extracting templates: %v", err))
 	}
-
-	fmt.Println(color.GreenString("Templates downloaded successfully"))
 
 	return nil
 }

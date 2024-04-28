@@ -28,9 +28,7 @@ _  __/   _  / _  /_/ // /_/ /
 	With figo, you can quickly scaffold out the directory structure, configuration files, and necessary boilerplate code for your Go applications.`
 	appCopyright            = "Apache-2.0 license\nFor more information, visit the GitHub repository: https://github.com/itpey/figo"
 	defaultTemplatesRepoURL = "https://github.com/itpey/figo-templates"
-
-	metaDataDirectoryname = "figo"
-	metadataFileName      = "figo.json"
+	metaDataDirectoryname   = "figo"
 )
 
 var (

@@ -194,7 +194,7 @@ func createProject(projectName string, templateName string) error {
 	}
 
 	// Copy project from template directory to project directory
-	if err := copyTemplate(templatePath, projectPath, true); err != nil {
+	if err := copyTemplate(templatePath, projectPath); err != nil {
 		return fmt.Errorf(color.RedString("Error: copying project: %v", err))
 	}
 

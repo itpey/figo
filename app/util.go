@@ -15,6 +15,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -56,7 +57,7 @@ func runCommand(command string, args []string, projectPath string, description s
 		return fmt.Errorf(color.RedString("Error: running %s: %v\n%s", description, err, output))
 	}
 
-	fmt.Printf(color.GreenString("%s finished successfully.\n\n"), description)
+	fmt.Printf(color.GreenString("%s finished successfully.\n"), description)
 	return nil
 }
 
@@ -133,4 +134,41 @@ func clearConsole() {
 		cmd.Stdout = os.Stdout
 		cmd.Run()
 	}
+}
+
+func isGoModule(dir string) bool {
+	goModFile := filepath.Join(dir, "go.mod")
+
+	// Use os.Stat to check the existence of the go.mod file
+	if _, err := os.Stat(goModFile); err != nil {
+		if os.IsNotExist(err) {
+			return false // go.mod file does not exist
+		}
+		// Handle other errors (e.g., permission denied)
+		return false
+	}
+
+	return true // go.mod file exists
+}
+
+// getRepositoryName retrieves the repository name from the Go module
+func getRepositoryName(dir string) (string, error) {
+	cmd := exec.Command("go", "list", "-m", "-json")
+	cmd.Dir = dir
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf(color.RedString("Error: running 'go list -m -json' in directory '%s': %v", dir, err))
+	}
+
+	var moduleInfo struct {
+		Path string `json:"Path"`
+	}
+	if err := json.Unmarshal(output, &moduleInfo); err != nil {
+		return "", fmt.Errorf(color.RedString("Error: parsing module information from 'go list -m -json' output: %v", err))
+	}
+
+	// Extract the repository name from the module import path
+	repoURL := moduleInfo.Path
+	repoName := filepath.Base(repoURL)
+	return repoName, nil
 }
