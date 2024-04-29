@@ -15,8 +15,8 @@
 package app
 
 import (
-	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -151,24 +151,28 @@ func isGoModule(dir string) bool {
 	return true // go.mod file exists
 }
 
-// getRepositoryName retrieves the repository name from the Go module
-func getRepositoryName(dir string) (string, error) {
-	cmd := exec.Command("go", "list", "-m", "-json")
-	cmd.Dir = dir
-	output, err := cmd.Output()
+func extractRepoNameFromURL(repoURL string) (string, error) {
+	// Parse the repository URL
+	parsedURL, err := url.Parse(repoURL)
 	if err != nil {
-		return "", fmt.Errorf(color.RedString("Error: running 'go list -m -json' in directory '%s': %v", dir, err))
+		return "", fmt.Errorf(color.RedString("Error: failed to parse repository URL: %v"), err)
 	}
 
-	var moduleInfo struct {
-		Path string `json:"Path"`
-	}
-	if err := json.Unmarshal(output, &moduleInfo); err != nil {
-		return "", fmt.Errorf(color.RedString("Error: parsing module information from 'go list -m -json' output: %v", err))
+	// Remove .git extension and split the path into segments
+	pathSegments := strings.Split(strings.TrimSuffix(parsedURL.Path, ".git"), "/")
+
+	// Find the last non-empty segment in the path
+	var repoName string
+	for i := len(pathSegments) - 1; i >= 0; i-- {
+		if pathSegments[i] != "" {
+			repoName = pathSegments[i]
+			break
+		}
 	}
 
-	// Extract the repository name from the module import path
-	repoURL := moduleInfo.Path
-	repoName := filepath.Base(repoURL)
+	// Validate and return the repository name
+	if repoName == "" {
+		return "", fmt.Errorf(color.RedString("Error: unable to determine repository name from URL: %s"), repoURL)
+	}
 	return repoName, nil
 }

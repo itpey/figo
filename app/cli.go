@@ -96,7 +96,7 @@ func Create() *cli.App {
 						Name:    "template",
 						Aliases: []string{"t"},
 						Usage:   "Project template to use",
-						Value:   "default",
+						Value:   "figo-templates_default",
 					},
 				},
 			},

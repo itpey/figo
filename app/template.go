@@ -24,18 +24,14 @@ import (
 	"github.com/fatih/color"
 )
 
-func extractAllTemplates(sourceDir string) error {
-	repoName, err := getRepositoryName(sourceDir)
-	if err != nil {
-		fmt.Printf(color.RedString("Error: getting repository name for template '%s': %v\n"), sourceDir, err)
-	}
+func extractAllTemplates(sourceDir string, repoName string) error {
 
 	if isGoModule(sourceDir) {
 		destPath := filepath.Join(templatesDirectory, repoName)
 		if err := copyTemplate(sourceDir, destPath); err != nil {
 			fmt.Printf(color.RedString("Error:Error copying template '%s': %v\n"), repoName, err)
 		}
-		fmt.Printf("Template '%s' extracted successfully\n", repoName)
+		fmt.Printf(color.GreenString("Template '%s' extracted successfully\n"), repoName)
 	}
 
 	files, err := os.ReadDir(sourceDir)
@@ -55,7 +51,7 @@ func extractAllTemplates(sourceDir string) error {
 			// Check if the directory contains a Go module
 			if isGoModule(templateDir) {
 				// Get the base directory name (to use as template name)
-				templateName := fmt.Sprintf("%s/%s", repoName, file.Name())
+				templateName := fmt.Sprintf("%s_%s", repoName, file.Name())
 
 				// Copy template directory to local templates directory
 				destPath := filepath.Join(templatesDirectory, templateName)
@@ -64,7 +60,7 @@ func extractAllTemplates(sourceDir string) error {
 					continue
 				}
 
-				fmt.Printf("Template '%s' extracted successfully\n", templateName)
+				fmt.Printf(color.GreenString("Template '%s' extracted successfully\n"), templateName)
 			}
 		}
 	}
@@ -158,13 +154,18 @@ func downloadTemplates(url string) error {
 
 	fmt.Print(color.YellowString("Downloading templates from repository: %s ...\n", url))
 
+	repoName, err := extractRepoNameFromURL(url)
+	if err != nil {
+		return fmt.Errorf("error extracting repository name: %v", err)
+	}
+
 	repoDir := repoDirectory
 	if err := gitClone(url, repoDir); err != nil {
 		return fmt.Errorf(color.RedString("Error: cloning repository: %v", err))
 	}
 	defer os.RemoveAll(repoDir)
 
-	if err := extractAllTemplates(repoDir); err != nil {
+	if err := extractAllTemplates(repoDir, repoName); err != nil {
 		return fmt.Errorf(color.RedString("Error: extracting templates: %v", err))
 	}
 
