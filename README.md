@@ -1,7 +1,12 @@
+[//]: # "Title: figo"
+[//]: # "Author: itpey"
+[//]: # "Attendees: itpey"
+[//]: # "Tags: #itpey #go #figo #golang #go-lang #cli"
+
 <div align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/itpey/figo/main/static/images/figo_icon_dark.png"  width="250" height="100">
-  <img alt="figo" src="https://raw.githubusercontent.com/itpey/figo/main/static/images/figo_icon-light.png"  width="250" height="100" >
+  <img alt="Figo is a command-line tool for rapidly scaffolding new Go projects based on customizable templates. It provides various commands to create, manage, and work with project templates efficiently." src="https://raw.githubusercontent.com/itpey/figo/main/static/images/figo_icon-light.png"  width="250" height="100" >
 </picture>
 </div>
 
