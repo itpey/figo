@@ -84,4 +84,4 @@ Figo is open-source software released under the Apache License, Version 2.0. You
 
 # Author
 
-Figo was created by [itpey](https://github.com/itpey).
+Figo was created by [itpey](https://github.com/itpey)
