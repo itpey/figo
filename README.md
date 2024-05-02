@@ -15,7 +15,7 @@ Figo is a command-line tool for rapidly scaffolding new Go projects based on cus
 </p>
 
 <p align="center">
-  <a href="https://pkg.go.dev/github.com/itpey/keycontrol">
+  <a href="https://pkg.go.dev/github.com/itpey/figo">
     <img src="https://pkg.go.dev/badge/github.com/itpey/figo.svg" alt="Go Reference">
   </a>
   <a href="https://github.com/itpey/figo/blob/main/LICENSE">
