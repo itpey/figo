@@ -49,7 +49,7 @@ func getDefaultDirectory(name string) string {
 func runCommand(command string, args []string, projectPath string, description string) error {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = projectPath
-	fmt.Printf("Running %s ...\n", description)
+	fmt.Printf("Running %s...\n", description)
 
 	// Execute the command
 	output, err := cmd.CombinedOutput()

@@ -57,7 +57,15 @@ func Create() *cli.App {
 			}
 
 			if len(templates) == 0 {
-				return fmt.Errorf(color.RedString("Error: no templates found in", templatesDirectory))
+				if err := downloadTemplates(defaultTemplatesRepoURL); err != nil {
+					return err
+				}
+				templates, err = listTemplates()
+				if err != nil {
+					return err
+				}
+
+				clearConsole()
 			}
 
 			selectedTemplate, err := selectTemplate(templates)
@@ -112,7 +120,13 @@ func Create() *cli.App {
 					}
 
 					if len(templates) == 0 {
-						return fmt.Errorf(color.RedString("Error: no templates found in", templatesDirectory))
+						if err := downloadTemplates(defaultTemplatesRepoURL); err != nil {
+							return err
+						}
+						templates, err = listTemplates()
+						if err != nil {
+							return err
+						}
 					}
 
 					fmt.Println(color.YellowString("Available templates:"))

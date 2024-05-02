@@ -156,7 +156,7 @@ func downloadTemplates(url string) error {
 
 	repoName, err := extractRepoNameFromURL(url)
 	if err != nil {
-		return fmt.Errorf("error extracting repository name: %v", err)
+		return fmt.Errorf(color.RedString("Error: extracting repository name: %v"), err)
 	}
 
 	repoDir := repoDirectory
@@ -204,6 +204,17 @@ func deleteTemplateByName(templateName string) error {
 }
 
 func listTemplates() ([]string, error) {
+
+	if _, err := os.Stat(templatesDirectory); os.IsNotExist(err) {
+		if err := os.MkdirAll(templatesDirectory, 0755); err != nil {
+			return nil, fmt.Errorf(color.RedString("Error: creating templates directory: %v", err))
+		}
+		if err := downloadTemplates(defaultTemplatesRepoURL); err != nil {
+			return nil, err
+		}
+
+	}
+
 	var templates []string
 
 	files, err := os.ReadDir(templatesDirectory)
@@ -222,6 +233,7 @@ func listTemplates() ([]string, error) {
 
 func selectTemplate(templates []string) (string, error) {
 	clearConsole()
+	fmt.Print(color.CyanString(appNameArt))
 	fmt.Println(color.YellowString("Select a template:"))
 
 	currentIndex := 0
@@ -245,6 +257,8 @@ func selectTemplate(templates []string) (string, error) {
 			if currentIndex > 0 {
 				currentIndex--
 				clearConsole()
+				fmt.Print(color.CyanString(appNameArt))
+
 				fmt.Println(color.YellowString("Select a template:"))
 				printTemplateOptions(templates, currentIndex)
 			}
@@ -252,11 +266,13 @@ func selectTemplate(templates []string) (string, error) {
 			if currentIndex < len(templates)-1 {
 				currentIndex++
 				clearConsole()
+				fmt.Print(color.CyanString(appNameArt))
 				fmt.Println(color.YellowString("Select a template:"))
 				printTemplateOptions(templates, currentIndex)
 			}
 		case keyboard.KeyEnter:
 			clearConsole()
+			fmt.Print(color.CyanString(appNameArt))
 			selectedTemplate := templates[currentIndex]
 			return selectedTemplate, nil
 		case keyboard.KeyEsc:
